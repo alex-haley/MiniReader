@@ -23,10 +23,7 @@ public class PDFViewer extends JFrame
 {
     public PDFViewer(String pdfPath, int signal) throws IOException
     {
-        if (signal == 0)
-            LoadPDFImage(pdfPath);
-        if (signal == 1)
-            LoadPDFText(pdfPath);
+	LoadPDF(pdfPath, signal);
     }
 
     void LoadFrame(JScrollPane scrollPane, int SizeX, int SizeY)
@@ -39,48 +36,53 @@ public class PDFViewer extends JFrame
         setVisible(true);
     }
 
-    void LoadPDFImage(String pdfPath)
+    // this function need some refactoring
+    // because we dont need to use JPanel and
+    // return it at the same time...
+    // this is just redicoulus.
+    JPanel FillPanel(PDDocument document, JPanel pagePanel, int signal)
     {
-        try (PDDocument document = Loader.loadPDF(new File(pdfPath)))
-        {
-            PDFRenderer renderer = new PDFRenderer(document);
+	try {
+	    if (signal == 0)
+	    {
+		PDFRenderer renderer = new PDFRenderer(document);
+		for (int page = 0; page < document.getNumberOfPages(); page++)
+		{
+		    BufferedImage image = renderer.renderImageWithDPI(page, 70, ImageType.RGB);
+		    JLabel label = new JLabel(new ImageIcon(image));
+		    pagePanel.add(label);
+		}
+		return pagePanel;
+	    } else
+	    {			    
+		PDFTextStripper stripper = new PDFTextStripper();
+		String text = stripper.getText(document);
+		JLabel label = new JLabel(text);
+		pagePanel.add(label);
+		return pagePanel;
+	    }
+	} catch (IOException e)
+	{
+	    e.printStackTrace();
+	}
 
-            JPanel pagePanel = new JPanel();
-            pagePanel.setLayout(new BoxLayout(pagePanel, BoxLayout.Y_AXIS));
-
-            for (int page = 0; page < document.getNumberOfPages(); page++)
-            {
-                BufferedImage image = renderer.renderImageWithDPI(page, 70, ImageType.RGB);
-                JLabel label = new JLabel(new ImageIcon(image));
-                pagePanel.add(label);
-            }
-
-            JScrollPane scrollPane = new JScrollPane(pagePanel);
-            LoadFrame(scrollPane, 600, 800);
-
-            document.close();
-        } catch (IOException e)
-        {
-            e.printStackTrace();
-        }
+	JPanel zeroPanel = new JPanel();
+	return zeroPanel;
     }
 
-    void LoadPDFText(String pdfPath)
+    void LoadPDF(String pdfPath, int signal)
     {
         try (PDDocument document = Loader.loadPDF(new File(pdfPath)))
         {
-            PDFTextStripper stripper = new PDFTextStripper();
-            String text = stripper.getText(document);
-
             JPanel pagePanel = new JPanel();
             pagePanel.setLayout(new BoxLayout(pagePanel, BoxLayout.Y_AXIS));
-            JLabel label = new JLabel(text);
-            pagePanel.add(label);
 
+	    pagePanel = FillPanel(document, pagePanel, signal);
+	    
             JScrollPane scrollPane = new JScrollPane(pagePanel);
             LoadFrame(scrollPane, 600, 800);
             document.close();
-
+	    
         } catch (IOException e)
         {
             e.printStackTrace();
